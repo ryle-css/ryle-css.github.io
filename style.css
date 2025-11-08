@@ -42,6 +42,45 @@ body{
 }
 .subtitle{margin:8px 0 20px;color:#444}
 
+/* Skip link for keyboard users */
+.skip-link{
+  position:absolute;left:12px;top:8px;padding:8px 10px;border-radius:6px;background:#111;color:#fff;text-decoration:none;z-index:2000;transform:translateY(-120%);transition:transform .18s ease;font-size:0.95rem}
+.skip-link:focus{transform:translateY(0);outline:none;box-shadow:0 6px 18px rgba(0,0,0,0.18)}
+
+/* Hero banner */
+.hero-banner{margin:12px auto 0;max-width:420px;height:80px;display:flex;align-items:center;justify-content:center;border-radius:12px;overflow:hidden;box-shadow:0 8px 26px rgba(0,0,0,0.08);animation:heroGradient 8s linear infinite;background-size:200% 200%}
+@keyframes heroGradient{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+/* Stronger focus and contrast for accessibility */
+.btn:focus-visible{outline:3px solid rgba(255,255,255,0.9); outline-offset:4px; box-shadow:0 10px 30px rgba(0,0,0,0.2)}
+.btn.secondary{background:transparent;color:var(--accent1);border:2px solid rgba(0,0,0,0.06)}
+.modal-input:focus, .modal-select:focus{outline:3px solid rgba(0,0,0,0.06); box-shadow:0 6px 18px rgba(0,0,0,0.08)}
+
+/* Improve color contrast for text */
+.subtitle, .wish-line, .wish-sign{color:#222}
+
+/* focus target for repurposed skip behavior */
+#stage:focus{outline:3px solid rgba(107,219,181,0.9); outline-offset:6px}
+
+/* Skip warning overlay styles */
+.skip-warning{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:3000;padding:24px}
+.skip-warning.hidden{display:none}
+.skip-warning-inner{background:#fff;color:#111;max-width:680px;width:100%;border-radius:14px;padding:28px 26px;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,0.4);transform:scale(0.96);animation:skipPop .28s cubic-bezier(.2,.9,.28,1) forwards}
+.skip-x{font-size:96px;line-height:1;color:#c23;border-radius:8px;margin-bottom:6px}
+.skip-warning h2{margin:6px 0 6px;font-size:1.6rem;color:#c23}
+.skip-warning p{margin:6px 0 14px;font-size:1.05rem}
+.skip-warning-actions{display:flex;gap:12px;justify-content:center;margin-top:8px}
+.skip-warning .btn{min-width:140px}
+
+@keyframes skipPop{0%{opacity:0;transform:scale(0.94)}60%{opacity:1;transform:scale(1.02)}100%{opacity:1;transform:scale(1)}}
+
+/* Ensure overlay is usable on small screens */
+@media (max-width:520px){
+  .skip-x{font-size:72px}
+  .skip-warning-inner{padding:18px}
+  .skip-warning .btn{min-width:110px}
+}
+
 .actions{margin:18px 0}
 .btn{
   background: linear-gradient(90deg,var(--accent1),var(--accent3));
@@ -67,6 +106,9 @@ body{
 .modal h2{margin:0 0 6px;font-size:1.25rem}
 .modal .modal-text{color:#444;margin-bottom:10px}
 .modal-input{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #eee;margin-bottom:12px;font-size:1rem}
+/* template select inside modal */
+.modal-select{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #eee;background:white;font-size:1rem;margin-bottom:12px}
+.modal-label{display:block}
 .modal-actions{display:flex;gap:10px;justify-content:center}
 .modal .btn{padding:8px 14px;border-radius:8px}
 .modal .btn.secondary{border:1px solid rgba(0,0,0,0.06);background:transparent;color:var(--accent2)}

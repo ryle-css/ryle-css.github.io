@@ -11,6 +11,7 @@
         <script src="main.js" defer></script>
     </head>
     <body>
+    <a class="skip-link" href="#stage">Skip to content</a>
             <!-- Code gate calculator overlay (appears first) -->
             <div id="codeGate" class="code-gate" role="dialog" aria-modal="true" aria-label="Enter code">
                 <div class="code-gate-backdrop"></div>
@@ -40,6 +41,13 @@
                     <h2 id="modalTitle">Open Your Surprise 🎁</h2>
                     <p class="modal-text">Kailangan mong ilagay ang pangalan mo.</p>
                     <input id="nameInput" class="modal-input" type="text" placeholder="Required!" aria-label="Recipient name" />
+                    <label for="templateSelect" class="modal-label" style="display:block;margin:8px 0 4px;color:#666;font-size:0.9rem">Choose a message template</label>
+                    <select id="templateSelect" class="modal-select" aria-label="Message template">
+                        <option value="0">Warm wishes</option>
+                        <option value="1">Funny</option>
+                        <option value="2">Short</option>
+                        <option value="3">Heartfelt</option>
+                    </select>
                     <div class="modal-actions">
                         <button id="openBtn" class="btn">Open Message</button>
                         <button id="skipBtn" class="btn secondary">Skip</button>
@@ -47,19 +55,50 @@
                 </div>
             </div>
 
+            <!-- Skip warning overlay (triggered by modal Skip button) -->
+            <div id="skipWarning" class="skip-warning hidden" role="alertdialog" aria-modal="true" aria-labelledby="skipWarningTitle" aria-describedby="skipWarningDesc">
+                <div class="skip-warning-inner">
+                    <div class="skip-x" aria-hidden="true">✖</div>
+                    <h2 id="skipWarningTitle">Warning</h2>
+                    <p id="skipWarningDesc">please ilagay mo yung pangalan mo or else....😡</p>
+                    <div class="skip-warning-actions">
+                        <button id="goNameBtn" class="btn">close</button>
+                        <button id="closeWarningBtn" class="btn secondary">fine, i'll put it in</button>
+                    </div>
+                </div>
+            </div>
+
             <main class="page">
-        <header class="hero">
-            <p id="subtitle" class="subtitle">A colorful surprise just for you</p>
-        </header>
+            <header class="hero">
+                    <h1 class="title">Happy Birthday!</h1>
+                    <p id="subtitle" class="subtitle">A colorful surprise just for you</p>
+                                        <!-- Animated hero banner (decorative) -->
+                                        <div class="hero-banner" role="img" aria-label="Colorful birthday banner with balloons and confetti">
+                                                <svg aria-hidden="true" width="260" height="80" viewBox="0 0 260 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <defs>
+                                                            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="0">
+                                                                <stop offset="0%" stop-color="#ff9a9e"/>
+                                                                <stop offset="50%" stop-color="#84fab0"/>
+                                                                <stop offset="100%" stop-color="#8fd3f4"/>
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <rect x="0" y="0" width="260" height="80" rx="12" fill="url(#g1)" opacity="0.95" />
+                                                        <g transform="translate(14,12) scale(0.9)" fill="#fff">
+                                                            <circle cx="18" cy="18" r="8" opacity="0.95" />
+                                                            <circle cx="40" cy="12" r="6" opacity="0.95" />
+                                                            <circle cx="60" cy="20" r="7" opacity="0.95" />
+                                                        </g>
+                                                </svg>
+                                        </div>
+            </header>
 
             <section class="actions">
-                <h1 class="title">Happy Birthday!</h1>
-                <button id="surpriseBtn" class="btn">Surprise Me 🎂</button>
-                <button id="resetBtn" class="btn secondary" aria-hidden="true" title="Stop disco">Stop</button>
-                <button id="muteBtn" class="btn secondary" aria-pressed="false" title="Mute / Unmute">🔊</button>
+                <button id="surpriseBtn" class="btn" aria-label="Surprise me">Surprise Me 🎂</button>
+                <button id="resetBtn" class="btn secondary" aria-hidden="true" title="Stop disco" aria-label="Stop disco">Stop</button>
+                <button id="muteBtn" class="btn secondary" aria-pressed="false" title="Mute / Unmute" aria-label="Mute or unmute audio">🔊</button>
             </section>
 
-            <section id="stage" class="stage" aria-live="polite">
+            <section id="stage" class="stage" aria-live="polite" tabindex="-1">
                 <!-- Cake is hidden until the user clicks Surprise -->
                 <div id="cake" class="cake hidden" aria-hidden="true">
                     <div class="plate"></div>

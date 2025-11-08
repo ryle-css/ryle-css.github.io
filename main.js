@@ -13,6 +13,15 @@
   const openBtn = document.getElementById('openBtn');
   const skipBtn = document.getElementById('skipBtn');
   const nameInput = document.getElementById('nameInput');
+  const templateSelect = document.getElementById('templateSelect');
+
+  // message templates
+  const templates = [
+    { lines: ['Wishing you a day filled with joy', 'and all the cake you can eat. Di sakin bagay hehehe! pahingi ako ha! please Volume Up'], sign: 'HBRDY' },
+    { lines: ['Another year older,', "pero ganon parin ang height oops sorry! Party time! please Volume Up!"], sign: 'LOL' },
+    { lines: ['you are sort', 'Have a fantastic day! please Volume Up!'], sign: 'Cheers' },
+    { lines: ['On this special day,', 'Sana may handaan para makakain ako ng cake hehehe! please Volume Up!'], sign: 'Always' }
+  ];
 
   let confettiCtx, particles = [], raf;
   let isMuted = false;
@@ -248,13 +257,79 @@
     const name = (nameInput.value || '').trim();
     if(name) subtitle.textContent = `Happy Birthday, ${name}!`;
     else subtitle.textContent = 'Happy Birthday!';
+    // pick template index from the select (if present)
+    const tplIdx = templateSelect ? Number(templateSelect.value || 0) : 0;
     hideModal();
     // audio + messages + reveal
     // open letter first for a nicer experience
-    openLetter(name);
+    openLetter(name, tplIdx);
   });
-  if(skipBtn) skipBtn.addEventListener('click', ()=>{
-    hideModal();
+  // Skip button now shows a playful warning overlay (keeps skip link at top intact)
+  const skipWarning = document.getElementById('skipWarning');
+  const closeWarningBtn = document.getElementById('closeWarningBtn');
+  const goNameBtn = document.getElementById('goNameBtn');
+  let lastFocusedBeforeWarning = null;
+  function trapFocusIn(element){
+    const focusable = element.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if(!focusable.length) return function(){};
+    const first = focusable[0];
+    const last = focusable[focusable.length-1];
+    function onKey(e){
+      if(e.key === 'Tab'){
+        if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+        else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+      } else if(e.key === 'Escape'){
+        hideSkipWarning();
+      }
+    }
+    element.addEventListener('keydown', onKey);
+    return function(){ element.removeEventListener('keydown', onKey); };
+  }
+
+  function showSkipWarning(){
+    if(!skipWarning) return;
+    lastFocusedBeforeWarning = document.activeElement;
+    skipWarning.classList.remove('hidden');
+    // disable background scroll
+    document.body.style.overflow = 'hidden';
+    // focus first control
+    const btn = skipWarning.querySelector('button');
+    if(btn) btn.focus();
+    // trap focus
+    skipWarning._untrap = trapFocusIn(skipWarning);
+  }
+
+  function hideSkipWarning(){
+    if(!skipWarning) return;
+    skipWarning.classList.add('hidden');
+    document.body.style.overflow = '';
+    if(skipWarning._untrap) { skipWarning._untrap(); skipWarning._untrap = null; }
+    if(lastFocusedBeforeWarning && lastFocusedBeforeWarning.focus) lastFocusedBeforeWarning.focus();
+  }
+
+  if(skipBtn) skipBtn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    // show playful warning overlay instead of skipping
+    showSkipWarning();
+  });
+  if(closeWarningBtn) closeWarningBtn.addEventListener('click', (e)=>{ e.preventDefault(); hideSkipWarning(); });
+  if(goNameBtn) goNameBtn.addEventListener('click', (e)=>{ e.preventDefault(); hideSkipWarning(); if(nameInput){ hideModal(); nameInput.focus(); } });
+
+  // --- Repurpose the top-of-page skip link to show the same warning (option B)
+  const topSkip = document.querySelector('.skip-link');
+  if(topSkip){
+    topSkip.addEventListener('click', (e)=>{
+      e.preventDefault();
+      showSkipWarning();
+    });
+  }
+
+  // Provide an alternative keyboard shortcut to actually skip to content: Alt+S
+  window.addEventListener('keydown', (e)=>{
+    if(e.altKey && e.key && e.key.toLowerCase() === 's'){
+      const stage = document.getElementById('stage');
+      if(stage){ stage.focus(); }
+    }
   });
   if(nameInput) nameInput.addEventListener('keydown', (e)=>{
     if(e.key === 'Enter'){
@@ -269,8 +344,8 @@
     if(document.body.classList.contains('disco')){ exitDisco(); return; }
     // if code was passed and cake is revealed (has flicker), use this button to start disco
     if(codePassed && cake && cake.classList.contains('flicker')){ enterDisco(); return; }
-    // otherwise, open the letter as before
-    openLetter('');
+    // otherwise, open the letter as before (default template)
+    openLetter('', 0);
   });
 
   // --- Mute toggle ---
@@ -368,12 +443,18 @@
   const saveLetterBtn = document.getElementById('saveLetterBtn');
   const letterText = document.getElementById('letterText');
 
-  function openLetter(name){
+  function openLetter(name, templateIndex = 0){
     if(!letterWrap || !envelopeEl) return;
-    // personalize the letter if name provided
+    // apply template content
+    const tpl = templates[templateIndex] || templates[0];
+    const p1 = envelopeEl.querySelector('.wish-line');
+    const p2 = envelopeEl.querySelectorAll('.wish-line')[1];
     const sign = envelopeEl.querySelector('.wish-sign');
+    if(p1) p1.textContent = tpl.lines[0] || '';
+    if(p2) p2.textContent = tpl.lines[1] || '';
+    // personalize the letter sign if name provided
     if(name && sign) sign.textContent = `Happy Birthday, ${name}!`;
-    else if(sign) sign.textContent = 'Happy Birthday!';
+    else if(sign) sign.textContent = tpl.sign || 'Happy Birthday!';
 
     letterWrap.classList.remove('hidden');
     letterWrap.setAttribute('aria-hidden','false');
