@@ -1,5 +1,5 @@
-// main.js — handles Surprise button, cake reveal and confetti animation
-// main.js — handles Welcome modal, Surprise button, cake reveal and confetti animation
+// main.js — secret code gate, welcome form, virtual letter, cake reveal,
+// confetti, disco mode, and localStorage "memory" for returning visitors.
 (function() {
   const btn = document.getElementById('surpriseBtn');
   const reset = document.getElementById('resetBtn');
@@ -7,6 +7,7 @@
   const balloons = document.getElementById('balloons');
   const canvas = document.getElementById('confetti');
   const subtitle = document.getElementById('subtitle');
+  const titleEl = document.getElementById('title');
 
   // Modal elements
   const modal = document.getElementById('welcomeModal');
@@ -14,6 +15,13 @@
   const skipBtn = document.getElementById('skipBtn');
   const nameInput = document.getElementById('nameInput');
   const templateSelect = document.getElementById('templateSelect');
+
+  // Keys used to remember things in this browser between visits
+  // (see README.md -> "Saved settings")
+  const STORAGE_NAME = 'hb-name';
+  const STORAGE_TEMPLATE = 'hb-template';
+  const STORAGE_LETTER = 'hb-letter';
+  const STORAGE_MUTED = 'hb-muted';
 
   // message templates
   const templates = [
@@ -26,6 +34,22 @@
   let confettiCtx, particles = [], raf;
   let isMuted = false;
   let codePassed = false;
+  let cakeRevealed = false; // true once the cake has been shown at least once
+
+  // Show/hide an element AND keep aria-hidden in sync with it, in one place.
+  // (Before, some places updated the "hidden" class and aria-hidden separately,
+  // which let them drift apart -- an element could end up visible on screen but
+  // marked hidden for screen readers, or the other way around.)
+  function showEl(el){
+    if(!el) return;
+    el.classList.remove('hidden');
+    el.setAttribute('aria-hidden', 'false');
+  }
+  function hideEl(el){
+    if(!el) return;
+    el.classList.add('hidden');
+    el.setAttribute('aria-hidden', 'true');
+  }
 
   function resizeCanvas(){
     if(!canvas) return;
@@ -82,28 +106,27 @@
   }
 
   function reveal(){
-    cake.classList.remove('hidden');
-    cake.setAttribute('aria-hidden','false');
-    balloons.classList.remove('hidden');
-    balloons.setAttribute('aria-hidden','false');
-    reset.setAttribute('aria-hidden','false');
-    // add candle flicker effect
-    cake.classList.add('flicker');
+    showEl(cake);
+    showEl(balloons);
+    cakeRevealed = true;
     startConfetti();
   }
 
   function resetAll(){
-    cake.classList.add('hidden');
-    cake.setAttribute('aria-hidden','true');
-    balloons.classList.add('hidden');
-    balloons.setAttribute('aria-hidden','true');
-    reset.setAttribute('aria-hidden','true');
-    if(btn) btn.classList.add('hidden');
-    // remove flicker
-    cake.classList.remove('flicker');
+    hideEl(cake);
+    hideEl(balloons);
+    hideEl(reset);
+    showEl(btn); // bring "Surprise Me" back so the visitor can start again
+    cakeRevealed = false;
     stopConfetti();
-    // hide stickmen if present
     hideStickmen();
+  }
+
+  function onCodeSuccess(){
+    codePassed = true;
+    hideEl(btn);
+    hideEl(reset);
+    if(titleEl) titleEl.classList.add('revealed'); // little "pop" on the title
   }
 
   // --- Disco party mode ---
@@ -162,15 +185,16 @@
   function stopTextLoop(){ if(textLoopInterval){ clearInterval(textLoopInterval); textLoopInterval = null } }
   // show/hide stickmen
   const stickmenEl = document.getElementById('stickmen');
-  function showStickmen(){ if(stickmenEl){ stickmenEl.classList.remove('hidden'); stickmenEl.setAttribute('aria-hidden','false'); } }
-  function hideStickmen(){ if(stickmenEl){ stickmenEl.classList.add('hidden'); stickmenEl.setAttribute('aria-hidden','true'); } }
+  function showStickmen(){ showEl(stickmenEl); }
+  function hideStickmen(){ hideEl(stickmenEl); }
   // create/remove visual overlay for disco
   function createDiscoOverlay(){
     const ov = document.createElement('div'); ov.className = 'disco-overlay';
     const s1 = document.createElement('div'); s1.className='spot c1';
     const s2 = document.createElement('div'); s2.className='spot c2';
     const s3 = document.createElement('div'); s3.className='spot c3';
-    ov.appendChild(s1); ov.appendChild(s2); ov.appendChild(s3);
+    const s4 = document.createElement('div'); s4.className='spot c4';
+    ov.appendChild(s1); ov.appendChild(s2); ov.appendChild(s3); ov.appendChild(s4);
     document.body.appendChild(ov);
     return ov;
   }
@@ -244,7 +268,12 @@
   function showModal(){
     if(!modal) return;
     modal.classList.remove('hidden');
-    nameInput.value = '';
+    // pre-fill with whatever this browser remembers from last time
+    nameInput.value = localStorage.getItem(STORAGE_NAME) || '';
+    if(templateSelect){
+      const savedTemplate = localStorage.getItem(STORAGE_TEMPLATE);
+      if(savedTemplate !== null) templateSelect.value = savedTemplate;
+    }
     nameInput.focus();
   }
 
@@ -259,6 +288,11 @@
     else subtitle.textContent = 'Happy Birthday!';
     // pick template index from the select (if present)
     const tplIdx = templateSelect ? Number(templateSelect.value || 0) : 0;
+
+    // remember these choices for next time
+    localStorage.setItem(STORAGE_NAME, name);
+    localStorage.setItem(STORAGE_TEMPLATE, String(tplIdx));
+
     hideModal();
     // audio + messages + reveal
     // open letter first for a nicer experience
@@ -293,8 +327,8 @@
     // disable background scroll
     document.body.style.overflow = 'hidden';
     // focus first control
-    const btn = skipWarning.querySelector('button');
-    if(btn) btn.focus();
+    const firstWarningBtn = skipWarning.querySelector('button');
+    if(firstWarningBtn) firstWarningBtn.focus();
     // trap focus
     skipWarning._untrap = trapFocusIn(skipWarning);
   }
@@ -313,7 +347,12 @@
     showSkipWarning();
   });
   if(closeWarningBtn) closeWarningBtn.addEventListener('click', (e)=>{ e.preventDefault(); hideSkipWarning(); });
-  if(goNameBtn) goNameBtn.addEventListener('click', (e)=>{ e.preventDefault(); hideSkipWarning(); if(nameInput){ hideModal(); nameInput.focus(); } });
+  if(goNameBtn) goNameBtn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    hideSkipWarning();
+    // the welcome modal was never hidden -- just send focus back to the name field
+    if(nameInput) nameInput.focus();
+  });
 
   // --- Repurpose the top-of-page skip link to show the same warning (option B)
   const topSkip = document.querySelector('.skip-link');
@@ -342,23 +381,24 @@
   if(btn) btn.addEventListener('click', ()=>{
     // if disco already active -> stop it
     if(document.body.classList.contains('disco')){ exitDisco(); return; }
-    // if code was passed and cake is revealed (has flicker), use this button to start disco
-    if(codePassed && cake && cake.classList.contains('flicker')){ enterDisco(); return; }
-    // otherwise, open the letter as before (default template)
-    openLetter('', 0);
+    // if code was passed and the cake has already been revealed, start disco instead
+    if(codePassed && cakeRevealed){ enterDisco(); return; }
+    // otherwise, open the letter -- using the last saved name, if any
+    const savedName = localStorage.getItem(STORAGE_NAME) || '';
+    openLetter(savedName, 0);
   });
 
   // --- Mute toggle ---
   const muteBtn = document.getElementById('muteBtn');
   if(muteBtn){
     // restore saved preference
-    const saved = localStorage.getItem('hb-muted');
+    const saved = localStorage.getItem(STORAGE_MUTED);
     if(saved === '1'){ isMuted = true; muteBtn.textContent = '🔈'; muteBtn.setAttribute('aria-pressed','true') }
     muteBtn.addEventListener('click', ()=>{
       isMuted = !isMuted;
       muteBtn.textContent = isMuted ? '🔈' : '🔊';
       muteBtn.setAttribute('aria-pressed', String(isMuted));
-      localStorage.setItem('hb-muted', isMuted ? '1' : '0');
+      localStorage.setItem(STORAGE_MUTED, isMuted ? '1' : '0');
     });
   }
 
@@ -377,15 +417,16 @@
     const codeDisplay = document.getElementById('codeDisplay');
     const keys = codeGate ? codeGate.querySelectorAll('.key') : [];
     let codeVal = '';
-  const secret = '11142006';
+    const SECRET_CODE = '11142006';
+
     function updateDisplay(){ codeDisplay.textContent = codeVal || '\u00A0'; }
     function clearCode(){ codeVal = ''; updateDisplay(); }
     function backspace(){ codeVal = codeVal.slice(0,-1); updateDisplay(); }
     function submitCode(){
-      if(codeVal === secret){
-        // correct — hide gate and show the welcome modal so the user can type the name
+      if(codeVal === SECRET_CODE){
+        // correct -- mark success, hide the gate, then show the welcome modal
+        onCodeSuccess();
         codeGate.classList.add('hidden');
-        // show the existing name modal so they can enter the recipient's name
         setTimeout(()=>{ showModal(); }, 220);
       } else {
         // brief shake/clear to indicate wrong
@@ -393,12 +434,6 @@
         setTimeout(()=>{ codeDisplay.classList.remove('wrong'); clearCode(); }, 600);
       }
     }
-      // hide the primary UI buttons when code is entered
-      function onCodeSuccess(){
-        codePassed = true;
-        if(btn) btn.classList.add('hidden');
-        if(reset) reset.classList.add('hidden');
-      }
     if(codeGate){
       updateDisplay();
       keys.forEach(k=>{
@@ -423,14 +458,6 @@
         else if(e.key === 'Escape'){ clearCode(); }
         else if(/^[0-9]$/.test(e.key)){ if(codeVal.length<12){ codeVal += e.key; updateDisplay(); } }
       });
-      // when the code is submitted successfully, hide primary buttons
-      const origSubmit = submitCode;
-      submitCode = function(){
-        if(codeVal === secret){
-          onCodeSuccess();
-        }
-        origSubmit();
-      }
     }
   });
   
@@ -445,19 +472,28 @@
 
   function openLetter(name, templateIndex = 0){
     if(!letterWrap || !envelopeEl) return;
-    // apply template content
-    const tpl = templates[templateIndex] || templates[0];
     const p1 = envelopeEl.querySelector('.wish-line');
     const p2 = envelopeEl.querySelectorAll('.wish-line')[1];
     const sign = envelopeEl.querySelector('.wish-sign');
-    if(p1) p1.textContent = tpl.lines[0] || '';
-    if(p2) p2.textContent = tpl.lines[1] || '';
-    // personalize the letter sign if name provided
-    if(name && sign) sign.textContent = `Happy Birthday, ${name}!`;
-    else if(sign) sign.textContent = tpl.sign || 'Happy Birthday!';
 
-    letterWrap.classList.remove('hidden');
-    letterWrap.setAttribute('aria-hidden','false');
+    // If the visitor already wrote & saved their own letter, use that.
+    // Otherwise fall back to the chosen template.
+    const savedLetter = localStorage.getItem(STORAGE_LETTER);
+    if(savedLetter){
+      const parts = savedLetter.split(/\r?\n/);
+      if(p1) p1.textContent = parts[0] || '';
+      if(p2) p2.textContent = parts[1] || '';
+      if(sign) sign.textContent = parts.slice(2).join(' ') || 'Happy Birthday!';
+    } else {
+      const tpl = templates[templateIndex] || templates[0];
+      if(p1) p1.textContent = tpl.lines[0] || '';
+      if(p2) p2.textContent = tpl.lines[1] || '';
+      // personalize the letter sign if name provided
+      if(name && sign) sign.textContent = `Happy Birthday, ${name}!`;
+      else if(sign) sign.textContent = tpl.sign || 'Happy Birthday!';
+    }
+
+    showEl(letterWrap);
     // ensure envelope starts closed
     envelopeEl.classList.remove('open');
     envelopeEl.classList.add('closed');
@@ -473,8 +509,7 @@
     envelopeEl.classList.remove('open');
     envelopeEl.classList.add('closed');
     setTimeout(()=>{
-      letterWrap.classList.add('hidden');
-      letterWrap.setAttribute('aria-hidden','true');
+      hideEl(letterWrap);
     }, 600);
   }
 
@@ -501,6 +536,10 @@
       if(p1) p1.textContent = l1;
       if(p2) p2.textContent = l2;
       if(sign) sign.textContent = signTxt;
+
+      // remember this custom letter for next time
+      localStorage.setItem(STORAGE_LETTER, val);
+
       // hide editor
       letterText.classList.add('hidden');
       saveLetterBtn.classList.add('hidden');
@@ -522,11 +561,16 @@
       reveal();
       // after reveal, show Surprise and Reset controls so user can start disco
       setTimeout(()=>{
-        if(btn) btn.classList.remove('hidden');
-        if(reset) reset.classList.remove('hidden');
+        showEl(btn);
+        showEl(reset);
       }, 600);
     }, 900);
   });
 
-  if(closeLetterBtn) closeLetterBtn.addEventListener('click', ()=>{ closeLetter(); });
+  if(closeLetterBtn) closeLetterBtn.addEventListener('click', ()=>{
+    closeLetter();
+    // If they close the letter without revealing the cake yet, bring back
+    // the Surprise button so they aren't stuck with nothing to click.
+    if(!cakeRevealed) showEl(btn);
+  });
 })();
